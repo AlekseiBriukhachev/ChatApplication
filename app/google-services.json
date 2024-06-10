@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "738278435890",
+    "project_id": "traskchat-aaa49",
+    "storage_bucket": "traskchat-aaa49.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:738278435890:android:67559d02e74825776ee02b",
+        "android_client_info": {
+          "package_name": "com.aleksei.traskchat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQHoTxfv2xntcqavbtAr-CQCL_IPfCVLs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

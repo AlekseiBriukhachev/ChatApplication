@@ -10,6 +10,12 @@ constraintlayout = "2.1.4"
 googleGmsGoogleServices = "4.4.2"
 firebaseDatabase = "21.0.0"
 lombok = "1.18.32"
+glide = "0.2.9"
+glideVersion = "5.0.0-rc01"
+firebaseBom = "33.1.0"
+firebasePerf = "21.0.1"
+firebaseCore = "21.1.1"
+firebaseAuth = "23.0.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -21,6 +27,12 @@ activity = { group = "androidx.activity", name = "activity", version.ref = "acti
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombok" }
+glide = { group = "net.alantea", name = "glide", version.ref = "glide" }
+github-glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glideVersion" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-perf = { group = "com.google.firebase", name = "firebase-perf", version.ref = "firebasePerf" }
+firebase-core = { group = "com.google.firebase", name = "firebase-core", version.ref = "firebaseCore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

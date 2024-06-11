@@ -1,6 +1,17 @@
 <resources>
-    <string name="app_name">TraskChat</string>
+    <string name="app_name">Trask Chat</string>
     <string name="message">Message</string>
     <string name="name">Name</string>
     <string name="send_button">Send</string>
+    <string name="time">14:40</string>
+    <string name="your_email">Your Email</string>
+    <string name="your_password">Your password</string>
+    <string name="username">Your name</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="tap_to_login">Tap To Login</string>
+    <string name="or_login">Or, login</string>
+    <string name="log_in">Log In</string>
+    <string name="or_sign_up">Or, Sign Up</string>
+    <string name="confirm_your_password">Confirm your password</string>
+    <string name="sign_out">Sign Out</string>
 </resources>

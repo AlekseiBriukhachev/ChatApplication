@@ -85,13 +85,30 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void loginSignUpUser(String email, String password) {
-        if (loginModeActive) {
-            auth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this, task -> loginOrSignUp(task, "SignIn"));
-        } else {
-            auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this, task -> loginOrSignUp(task, "SignUp"));
+        if (isInputValid(email, password)) {
+            if (loginModeActive) {
+                auth.signInWithEmailAndPassword(email, password)
+                        .addOnCompleteListener(this, task -> loginOrSignUp(task, "SignIn"));
+            } else {
+                if (password.equals(confirmPasswordEditText.getText().toString().trim())) {
+                    auth.createUserWithEmailAndPassword(email, password)
+                            .addOnCompleteListener(this, task -> loginOrSignUp(task, "SignUp"));
+                } else {
+                    Toast.makeText(this, "The password does not match", Toast.LENGTH_LONG).show();
+                }
+            }
         }
+    }
+
+    private boolean isInputValid(String email, String password) {
+        if (email.isEmpty()) {
+            Toast.makeText(this, "Please enter your email", Toast.LENGTH_SHORT).show();
+            return false;
+        } else if (password.trim().length() < 6) {
+            Toast.makeText(this, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
     }
 
     private void loginOrSignUp(Task<AuthResult> task, String authMethod) {

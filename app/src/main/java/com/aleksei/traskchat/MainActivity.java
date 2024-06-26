@@ -1,12 +1,12 @@
 package com.aleksei.traskchat;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -24,22 +24,26 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.android.material.slider.Slider;
+import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
-import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextWatcher {
+    private static final int RC_IMAGE_PICKER = 124;
     private ListView messageListView;
     private ChatMessageAdapter adapter;
     private ProgressBar progressBar;
@@ -52,6 +56,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private DatabaseReference messagesDatabaseReference;
     private DatabaseReference usersDatabaseReference;
     private ChildEventListener messagesEventListener;
+    private FirebaseStorage storage;
+    private StorageReference chatImagesStorageReference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +75,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         database = FirebaseDatabase.getInstance("https://traskchat-aaa49-default-rtdb.europe-west1.firebasedatabase.app/");
+        storage = FirebaseStorage.getInstance();
+//        storage = FirebaseStorage.getInstance("gs://traskchat-aaa49.appspot.com");
         messagesDatabaseReference = database.getReference().child("messages");
+        chatImagesStorageReference = storage.getReference().child("chat_images");
         messagesEventListener = new ChildEventListener() {
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
@@ -100,7 +109,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         };
         messagesDatabaseReference.addChildEventListener(messagesEventListener);
 
-        userName = "Default User";
+        Intent intent = getIntent();
+        userName = intent != null ? intent.getStringExtra("userName") : "Default User";
 
         messages = new ArrayList<>();
         messageListView = findViewById(R.id.messageListView);
@@ -125,11 +135,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         int id = v.getId();
         if (id == R.id.sendImageButton) {
             Toast.makeText(this, "Image Button", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+            startActivityForResult(Intent.createChooser(intent, "Choose an image"), RC_IMAGE_PICKER);
         } else if (id == R.id.sendMessageButton) {
             Toast.makeText(this, "Message sent", Toast.LENGTH_LONG).show();
             ChatMessage message = new ChatMessage();
             message.setMessage(messageEditText.getText().toString());
-            message.setName(userName);
+            message.setName(userName != null ? userName : "Sucka");
             message.setImageUrl(null);
             String format = SimpleDateFormat.getInstance().format(Calendar.getInstance().getTime());
             message.setTime(format);
@@ -137,6 +151,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             messagesDatabaseReference.push().setValue(message);
             messageEditText.setText("");
         }
+    }
+
+    private void handleSendImage() {
+        Toast.makeText(this, "Image Button", Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+        startActivityForResult(Intent.createChooser(intent, "Choose an image"), RC_IMAGE_PICKER);
+    }
+
+    private void handleSendMessage() {
+        Toast.makeText(this, "Message sent", Toast.LENGTH_LONG).show();
+        ChatMessage message = new ChatMessage();
+        message.setMessage(messageEditText.getText().toString());
+        message.setName(userName != null ? userName : "Sucka");
+        message.setImageUrl(null);
+        message.setTime(SimpleDateFormat.getInstance().format(Calendar.getInstance().getTime()));
+
+        messagesDatabaseReference.push().setValue(message);
+        messageEditText.setText("");
     }
 
     @Override
@@ -167,5 +201,45 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == RC_IMAGE_PICKER && resultCode == RESULT_OK) {
+            Toast.makeText(this, "Image selected", Toast.LENGTH_LONG).show();
+            Uri selectedImageUri = data.getData();
+            StorageReference imageReference = chatImagesStorageReference.child(selectedImageUri.getLastPathSegment());
+
+            UploadTask uploadTask = imageReference.putFile(selectedImageUri);
+
+//            uploadTask = imageReference.putFile(selectedImageUri);
+
+            Task<Uri> urlTask = uploadTask.continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+                @Override
+                public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+
+                    // Continue with the task to get the download URL
+                    return imageReference.getDownloadUrl();
+                }
+            }).addOnCompleteListener(new OnCompleteListener<Uri>() {
+                @Override
+                public void onComplete(@NonNull Task<Uri> task) {
+                    if (task.isSuccessful()) {
+                        Uri downloadUri = task.getResult();
+                        ChatMessage message = new ChatMessage();
+                        message.setImageUrl(downloadUri.toString());
+                        message.setName(userName);
+                        messagesDatabaseReference.push().setValue(message);
+                    } else {
+                        // Handle failures
+                        // ...
+                    }
+                }
+            });
+        }
     }
 }

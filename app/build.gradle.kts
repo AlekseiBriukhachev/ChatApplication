@@ -50,4 +50,5 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     annotationProcessor(libs.lombok)
+    implementation(libs.firebase.storage)
 }

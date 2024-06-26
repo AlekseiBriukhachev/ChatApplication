@@ -10,19 +10,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
-import org.w3c.dom.Text;
+import java.util.Objects;
 
 public class SignInActivity extends AppCompatActivity {
     private static final String TAG = "SignInActivity";
@@ -34,6 +34,8 @@ public class SignInActivity extends AppCompatActivity {
     private Button loginSignUpButton;
     private TextView toggleLoginSignUpTextView;
     private boolean loginModeActive;
+    private FirebaseDatabase database;
+    private DatabaseReference usersDatabaseReference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +57,8 @@ public class SignInActivity extends AppCompatActivity {
         if (currentUser != null) {
             startActivity(new Intent(SignInActivity.this, MainActivity.class));
         }
+        database = FirebaseDatabase.getInstance("https://traskchat-aaa49-default-rtdb.europe-west1.firebasedatabase.app/");
+        usersDatabaseReference = database.getReference().child("users");
 
 
         emailEditText = findViewById(R.id.emailEditText);
@@ -71,17 +75,11 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void toggleLoginMode() {
-        if (loginModeActive) {
-            loginModeActive = false;
-            loginSignUpButton.setText(R.string.sign_up);
-            toggleLoginSignUpTextView.setText(R.string.or_login);
-            confirmPasswordEditText.setVisibility(View.VISIBLE);
-        } else {
-            loginModeActive = true;
-            loginSignUpButton.setText(R.string.log_in);
-            toggleLoginSignUpTextView.setText(R.string.or_sign_up);
-            confirmPasswordEditText.setVisibility(View.GONE);
-        }
+        loginModeActive = !loginModeActive;
+        loginSignUpButton.setText(loginModeActive ? R.string.log_in : R.string.sign_up);
+        toggleLoginSignUpTextView.setText(loginModeActive ? R.string.or_sign_up : R.string.or_login);
+        confirmPasswordEditText.setVisibility(loginModeActive ? View.GONE : View.VISIBLE);
+        usernameEditText.setVisibility(loginModeActive ? View.GONE : View.VISIBLE);
     }
 
     private void loginSignUpUser(String email, String password) {
@@ -112,15 +110,39 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void loginOrSignUp(Task<AuthResult> task, String authMethod) {
+        Intent intent = new Intent(SignInActivity.this, MainActivity.class);
         if (task.isSuccessful()) {
             Log.d(TAG, authMethod + ":success");
-            startActivity(new Intent(SignInActivity.this, MainActivity.class));
-//                                updateUI(user);
+            FirebaseUser user = auth.getCurrentUser();
+            ChatUser chatUser = null;
+            if (authMethod.equals("SignUp")) {
+                chatUser = createChatUser(Objects.requireNonNull(user));
+            } else if (authMethod.equals("SignIn")) {
+                chatUser = getUserByEmail(Objects.requireNonNull(user));
+            }
+            intent.putExtra("userName", chatUser != null ? chatUser.getName() : "Default User");
+            startActivity(intent);
         } else {
             Log.w(TAG, authMethod + "failure", task.getException());
             Toast.makeText(SignInActivity.this, "Authentication failed.",
                     Toast.LENGTH_SHORT).show();
-//                                updateUI(null);
         }
+    }
+
+    private ChatUser createChatUser(FirebaseUser firebaseUser) {
+        ChatUser user = new ChatUser();
+        user.setId(firebaseUser.getUid());
+        user.setName(usernameEditText.getText().toString().trim());
+        user.setEmail(firebaseUser.getEmail());
+
+        usersDatabaseReference.push().setValue(user);
+        return user;
+    }
+
+    private  ChatUser getUserByEmail(FirebaseUser firebaseUser) {
+        ChatUser user = new ChatUser();
+        user.setEmail(firebaseUser.getEmail());
+        user.setName(firebaseUser.getDisplayName());
+        return user;
     }
 }

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Data
 public class ChatUser {
+    private String id;
     private String name;
     private String email;
-    private String id;
 }

@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -19,8 +20,12 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Objects;
 
@@ -55,7 +60,7 @@ public class SignInActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser != null) {
-            startActivity(new Intent(SignInActivity.this, MainActivity.class));
+            startActivity(new Intent(SignInActivity.this, ChatActivity.class));
         }
         database = FirebaseDatabase.getInstance("https://traskchat-aaa49-default-rtdb.europe-west1.firebasedatabase.app/");
         usersDatabaseReference = database.getReference().child("users");
@@ -110,7 +115,7 @@ public class SignInActivity extends AppCompatActivity {
     }
 
     private void loginOrSignUp(Task<AuthResult> task, String authMethod) {
-        Intent intent = new Intent(SignInActivity.this, MainActivity.class);
+        Intent intent = new Intent(SignInActivity.this, ChatActivity.class);
         if (task.isSuccessful()) {
             Log.d(TAG, authMethod + ":success");
             FirebaseUser user = auth.getCurrentUser();
@@ -118,14 +123,26 @@ public class SignInActivity extends AppCompatActivity {
             if (authMethod.equals("SignUp")) {
                 chatUser = createChatUser(Objects.requireNonNull(user));
             } else if (authMethod.equals("SignIn")) {
-                chatUser = getUserByEmail(Objects.requireNonNull(user));
+                getUserByEmail(Objects.requireNonNull(user), new GetUserCallback() {
+                    @Override
+                    public void onSuccess(ChatUser user) {
+                        intent.putExtra("userName", user.getName());
+                        startActivity(intent);
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        Log.e(TAG, error);
+                        Toast.makeText(SignInActivity.this, "User not found", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
             intent.putExtra("userName", chatUser != null ? chatUser.getName() : "Default User");
             startActivity(intent);
         } else {
-            Log.w(TAG, authMethod + "failure", task.getException());
-            Toast.makeText(SignInActivity.this, "Authentication failed.",
-                    Toast.LENGTH_SHORT).show();
+            String message = authMethod.equals("SignIn") ? "User not found" : "Authentication failed.";
+            Log.w(TAG, authMethod + " failure", task.getException());
+            Toast.makeText(SignInActivity.this, message, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -139,10 +156,33 @@ public class SignInActivity extends AppCompatActivity {
         return user;
     }
 
-    private  ChatUser getUserByEmail(FirebaseUser firebaseUser) {
-        ChatUser user = new ChatUser();
-        user.setEmail(firebaseUser.getEmail());
-        user.setName(firebaseUser.getDisplayName());
-        return user;
+    private  void getUserByEmail(FirebaseUser firebaseUser, final GetUserCallback callback) {
+
+        String emailToFind = firebaseUser.getEmail();
+
+        usersDatabaseReference.orderByChild("email").equalTo(emailToFind)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    for (DataSnapshot userSnapshot : snapshot.getChildren()) {
+                        String id = userSnapshot.child("id").getValue(String.class);
+                        String username = userSnapshot.child("name").getValue(String.class);
+                        String email = userSnapshot.child("email").getValue(String.class);
+
+                        ChatUser chatUser = new ChatUser(id, username, email);
+                        callback.onSuccess(chatUser);
+                        return;
+                    }
+                } else {
+                    callback.onFailure("User not found");
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                callback.onFailure(error.getMessage());
+            }
+        });
     }
 }

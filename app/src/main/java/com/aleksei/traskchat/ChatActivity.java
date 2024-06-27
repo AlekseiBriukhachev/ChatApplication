@@ -42,7 +42,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, TextWatcher {
+public class ChatActivity extends AppCompatActivity implements View.OnClickListener, TextWatcher {
     private static final int RC_IMAGE_PICKER = 124;
     private ListView messageListView;
     private ChatMessageAdapter adapter;
@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_chat);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
@@ -110,7 +110,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         messagesDatabaseReference.addChildEventListener(messagesEventListener);
 
         Intent intent = getIntent();
-        userName = intent != null ? intent.getStringExtra("userName") : "Default User";
+        userName = intent != null && intent.getStringExtra("userName") != null ? intent.getStringExtra("userName") : "Pidor";
 
         messages = new ArrayList<>();
         messageListView = findViewById(R.id.messageListView);
@@ -197,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == R.id.signOut) {
             FirebaseAuth.getInstance().signOut();
-            startActivity(new Intent(MainActivity.this, SignInActivity.class));
+            startActivity(new Intent(ChatActivity.this, SignInActivity.class));
             return true;
         }
         return super.onOptionsItemSelected(item);
